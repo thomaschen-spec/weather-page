@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台北即時天氣 — 專案介紹</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", "Microsoft JhengHei", sans-serif; background: #f0f6fb; margin: 0; padding: 24px; color: #23343f; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  .sub { color: #6a7d89; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .card h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .card ul { margin: 0; padding-left: 20px; line-height: 1.7; }
+  .cta { display: inline-block; background: #1d6fa5; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; }
+  .stack span { display: inline-block; background: #cfe8fb; color: #145179; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; margin: 2px; }
+  .note { font-size: 0.85rem; color: #6a7d89; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>台北即時天氣</h1>
+  <div class="sub">Weather Page — 排程自動更新練習</div>
+
+  <div class="card">
+    <h2>這是什麼</h2>
+    <p>一個純靜態的天氣頁面，重點不是天氣本身，是練「排程自動化」——
+    每小時自動抓資料、自動產生新頁面、自動部署，全程不用人手動。</p>
+    <a class="cta" href="https://weather-page-theta.vercel.app" target="_blank">打開實際網頁 →</a>
+    <p class="note">網址每 5 分鐘自動重新整理一次，永遠是最新天氣。</p>
+  </div>
+
+  <div class="card">
+    <h2>技術組合</h2>
+    <div class="stack">
+      <span>GitHub Actions</span><span>Open-Meteo API</span><span>Vercel</span>
+    </div>
+    <ul style="margin-top:12px;">
+      <li>資料來源：Open-Meteo（免金鑰，公開氣象資料）</li>
+      <li>排程：GitHub Actions 每小時整點過 5 分自動觸發一次</li>
+      <li>部署：Vercel 偵測到新 commit 自動重新部署（純靜態，無需資料庫）</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>流程</h2>
+    <p>GitHub Actions 排程 → 呼叫 Open-Meteo API 抓最新天氣 → 套進樣板產生新頁面
+    → git commit + push → Vercel 自動重新部署 → 打開網址就是最新一版。</p>
+  </div>
+</div>
+</body>
+</html>
