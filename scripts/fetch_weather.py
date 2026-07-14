@@ -31,7 +31,7 @@ def render(data):
     current = data["current"]
     desc, icon = describe(current["weather_code"])
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M")
     html = (
         template
         .replace("{{CITY}}", CITY)
