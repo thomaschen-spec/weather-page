@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台北 即時天氣</title>
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(160deg, #6ea8ff, #a5c8ff);
+    color: #1a2540;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: linear-gradient(160deg, #16213e, #0f1626); color: #eaf0ff; }
+    .card { background: rgba(255,255,255,0.06); }
+  }
+  .card {
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(8px);
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    width: min(92vw, 420px);
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  }
+  .city { font-size: 1.3rem; font-weight: 600; opacity: 0.85; }
+  .icon { font-size: 5rem; margin: 0.5rem 0; }
+  .temp { font-size: 3.2rem; font-weight: 700; }
+  .desc { font-size: 1.4rem; margin: 0.3rem 0 1.2rem; }
+  .meta {
+    display: flex;
+    justify-content: space-around;
+    font-size: 0.95rem;
+    opacity: 0.85;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 1rem;
+  }
+  .updated {
+    margin-top: 1.2rem;
+    font-size: 0.75rem;
+    opacity: 0.6;
+  }
+  /* 手機直式：卡片自動變窄變高，上面的 min()寬度與 flex 置中已經處理好，不用另外寫 media query */
+  @media (min-width: 700px) {
+    .card { padding: 3rem 2.5rem; }
+    .temp { font-size: 4rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="city">台北</div>
+    <div class="icon">🌤️</div>
+    <div class="temp">34°C</div>
+    <div class="desc">大致晴朗</div>
+    <div class="meta">
+      <div>💧 濕度 60%</div>
+      <div>💨 風速 4 km/h</div>
+    </div>
+    <div class="updated">最後更新：2026-07-14 11:33（每小時自動更新一次）</div>
+  </div>
+  <script>
+    // 頁面開著就每 5 分鐘自動重新整理一次，確保看到的是排程更新後的最新內容
+    setTimeout(() => location.reload(), 5 * 60 * 1000);
+  </script>
+</body>
+</html>
