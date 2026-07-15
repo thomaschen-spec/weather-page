@@ -5,7 +5,7 @@ import urllib.request
 import json
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from weather_codes import describe, severe_alert
+from weather_codes import describe, severe_alert, outfit_suggestion
 
 CITY = "台北"
 LATITUDE = 25.0330
@@ -39,6 +39,7 @@ def render(data):
         current.get("precipitation_probability"),
     )
     alert_html = f'<div class="alert">{alert}</div>' if alert else ""
+    outfit = outfit_suggestion(current.get("apparent_temperature"), current.get("precipitation_probability"))
     html = (
         template
         .replace("{{CITY}}", CITY)
@@ -49,6 +50,7 @@ def render(data):
         .replace("{{WIND}}", str(round(current["wind_speed_10m"])))
         .replace("{{UPDATED_AT}}", now)
         .replace("{{ALERT}}", alert_html)
+        .replace("{{OUTFIT}}", outfit)
     )
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(html, encoding="utf-8")

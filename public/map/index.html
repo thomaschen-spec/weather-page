@@ -47,6 +47,10 @@
   .weather-card .desc { font-size: 0.85rem; color: #cdd9e6; margin: 2px 0 8px; }
   .weather-card .rows { font-size: 0.8rem; color: #dbe6f2; line-height: 1.6; }
   .weather-card .loading { font-size: 0.85rem; color: #9fb3c8; }
+  .weather-card .outfit {
+    margin-top: 8px; padding: 6px 8px; border-radius: 8px; font-size: 0.78rem;
+    background: rgba(255,255,255,0.08);
+  }
   .weather-card .alert {
     margin-top: 8px; padding: 6px 8px; border-radius: 8px; font-size: 0.78rem;
     background: rgba(224, 82, 82, 0.25); border: 1px solid rgba(224, 82, 82, 0.5); color: #ffd7d7;
@@ -297,6 +301,18 @@ function severeAlert(c) {
   return null;
 }
 
+function outfitSuggestion(c) {
+  const t = c.apparent_temperature;
+  let base;
+  if (t >= 30) base = "🩳 天氣炎熱，短袖短褲＋防曬，多補充水分";
+  else if (t >= 25) base = "👕 舒適溫暖，短袖或薄長袖都可以";
+  else if (t >= 20) base = "🧥 微涼，建議薄外套或長袖";
+  else if (t >= 15) base = "🧣 有點涼，穿件外套比較保險";
+  else base = "🧤 偏冷，記得穿保暖外套，注意保暖";
+  if ((c.precipitation_probability ?? 0) >= 50) base += "，降雨機率高記得帶傘";
+  return base;
+}
+
 function openWeatherCard(county) {
   if (openCards.has(county.name)) return;
 
@@ -317,6 +333,7 @@ function openWeatherCard(county) {
     const icon = WEATHER_ICONS[c.weather_code] ?? "🌡️";
     const desc = WEATHER_DESC[c.weather_code] ?? "";
     const alertMsg = severeAlert(c);
+    const outfitMsg = outfitSuggestion(c);
     card.innerHTML = `
       <span class="close">✕</span>
       <div class="city">${county.name}</div>
@@ -327,6 +344,7 @@ function openWeatherCard(county) {
         濕度：${Math.round(c.relative_humidity_2m)}%<br>
         降雨機率：${c.precipitation_probability ?? "-"}%
       </div>
+      <div class="outfit">${outfitMsg}</div>
       ${alertMsg ? `<div class="alert">${alertMsg}</div>` : ""}`;
     card.querySelector(".close").addEventListener("click", () => {
       card.remove();

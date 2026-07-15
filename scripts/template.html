@@ -49,6 +49,16 @@
     font-size: 0.75rem;
     opacity: 0.6;
   }
+  .outfit {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    .outfit { background: rgba(255,255,255,0.08); }
+  }
   .alert {
     margin-top: 1rem;
     padding: 0.6rem 0.8rem;
@@ -78,6 +88,7 @@
       <div>💧 濕度 {{HUMIDITY}}%</div>
       <div>💨 風速 {{WIND}} km/h</div>
     </div>
+    <div class="outfit">{{OUTFIT}}</div>
     {{ALERT}}
     <div class="updated">最後更新：{{UPDATED_AT}}（每小時自動更新一次）</div>
     <div class="updated"><a href="./map/" style="color:inherit;">🗺️ 看 3D 台灣天氣地圖 →</a></div>

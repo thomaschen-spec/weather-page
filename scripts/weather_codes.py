@@ -42,3 +42,22 @@ def severe_alert(weather_code, wind_speed, apparent_temp, precip_prob):
     if precip_prob is not None and precip_prob >= 80:
         return "☔ 降雨機率很高，記得帶傘"
     return None
+
+
+def outfit_suggestion(apparent_temp, precip_prob):
+    if apparent_temp is None:
+        base = "查不到體感溫度，先看天氣描述決定穿著"
+    elif apparent_temp >= 30:
+        base = "🩳 天氣炎熱，短袖短褲＋防曬，多補充水分"
+    elif apparent_temp >= 25:
+        base = "👕 舒適溫暖，短袖或薄長袖都可以"
+    elif apparent_temp >= 20:
+        base = "🧥 微涼，建議薄外套或長袖"
+    elif apparent_temp >= 15:
+        base = "🧣 有點涼，穿件外套比較保險"
+    else:
+        base = "🧤 偏冷，記得穿保暖外套，注意保暖"
+
+    if precip_prob is not None and precip_prob >= 50:
+        base += "，降雨機率高記得帶傘"
+    return base
