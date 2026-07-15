@@ -95,7 +95,7 @@ sun.position.set(3000, 6000, 2000);
 scene.add(sun);
 
 // ---- 簡易軌道控制（拖曳旋轉、滾輪縮放，不依賴 OrbitControls 額外檔案）----
-let spherical = { radius: 7000, theta: 0.9, phi: 0.55 };
+let spherical = { radius: 7000, theta: Math.PI, phi: 0.5 };
 let dragging = false, lastX = 0, lastY = 0;
 function updateCamera() {
   const r = spherical.radius, t = spherical.theta, p = spherical.phi;
