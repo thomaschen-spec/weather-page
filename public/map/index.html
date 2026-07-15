@@ -17,8 +17,9 @@
   }
   #picker select {
     background: #16273d; color: #eaf3ff; border: 1px solid #2c4a6e; border-radius: 6px;
-    padding: 8px 10px; font-size: 0.95rem;
+    padding: 8px 10px; font-size: 0.95rem; display: block;
   }
+  #districtSelect { margin-top: 8px; }
   #hint {
     position: absolute; bottom: 14px; left: 16px; z-index: 10; color: #9fb3c8;
     font-family: -apple-system, "Segoe UI", "Microsoft JhengHei", sans-serif; font-size: 0.75rem;
@@ -61,8 +62,9 @@
 <div id="app">
   <div id="picker">
     <select id="countySelect"><option value="">選縣市…</option></select>
+    <select id="districtSelect" style="display:none;"><option value="">選區/鄉/鎮…</option></select>
   </div>
-  <div id="hint">滑鼠拖曳旋轉／滾輪縮放；點擊或用選單選一個縣市，放大後可以再點裡面的區/鄉/鎮查看該區天氣</div>
+  <div id="hint">滑鼠拖曳旋轉／滾輪縮放；先選縣市，放大後可以再從第二個選單選區/鄉/鎮，或直接點地圖查看該區天氣</div>
   <div id="compass" title="指南針：紅色箭頭永遠指向畫面上的地理北方">
     <svg viewBox="0 0 64 64">
       <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
@@ -105,6 +107,7 @@ const WEATHER_DESC = {
 
 const app = document.getElementById("app");
 const select = document.getElementById("countySelect");
+const districtSelect = document.getElementById("districtSelect");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1a2b);
@@ -355,10 +358,33 @@ function focusCounty(name) {
   updateCamera();
   spawnCityDecor(mesh.userData.county);
   openWeatherCard(mesh.userData.county, mesh.userData.county.name, mesh.userData.county.name);
+
+  districtSelect.innerHTML = '<option value="">選區/鄉/鎮…</option>';
+  mesh.userData.county.districts.forEach((d) => {
+    const opt = document.createElement("option");
+    opt.value = d.name;
+    opt.textContent = d.name;
+    districtSelect.appendChild(opt);
+  });
+  districtSelect.style.display = mesh.userData.county.districts.length ? "block" : "none";
+  districtSelect.dataset.countyName = name;
+}
+
+function focusDistrict(countyName, districtName) {
+  const countyMesh = countyMeshes.find((m) => m.userData.county.name === countyName);
+  const district = countyMesh?.userData.county.districts.find((d) => d.name === districtName);
+  if (!district) return;
+  const key = `${countyName}/${districtName}`;
+  openWeatherCard(district, key, `${countyName} ${districtName}`);
 }
 
 select.addEventListener("change", () => {
   if (select.value) focusCounty(select.value);
+  else districtSelect.style.display = "none";
+});
+
+districtSelect.addEventListener("change", () => {
+  if (districtSelect.value) focusDistrict(districtSelect.dataset.countyName, districtSelect.value);
 });
 
 renderer.domElement.addEventListener("click", (e) => {
@@ -373,6 +399,7 @@ renderer.domElement.addEventListener("click", (e) => {
       const { county, district } = districtHits[0].object.userData;
       const key = `${county.name}/${district.name}`;
       openWeatherCard(district, key, `${county.name} ${district.name}`);
+      if (districtSelect.dataset.countyName === county.name) districtSelect.value = district.name;
       return;
     }
   }
