@@ -1,14 +1,15 @@
-// 一次性建置腳本：把台灣縣市 GeoJSON 簡化成小巧的 map-data.json，給 3D 地圖頁面用。
-// 座標從經緯度轉成平面座標，縣市邊界用距離門檻做低多邊形簡化。
-// 原始資料來源（9MB，不進 repo，只在重新產生 map-data.json 時才需要）：
-// https://raw.githubusercontent.com/g0v/twgeojson/master/json/twCounty2010.geo.json
-// 下載後存成 scripts/tw-raw.geojson 再執行本腳本一次即可。
+// 一次性建置腳本：把台灣縣市／區鄉鎮市 GeoJSON 簡化成小巧的 map-data.json，給 3D 地圖頁面用。
+// 座標從經緯度轉成平面座標，邊界用距離門檻做低多邊形簡化。
+// 原始資料來源（都不進 repo，只在重新產生 map-data.json 時才需要）：
+// 縣市：https://raw.githubusercontent.com/g0v/twgeojson/master/json/twCounty2010.geo.json → scripts/tw-raw.geojson
+// 區鄉鎮市：https://raw.githubusercontent.com/g0v/twgeojson/master/json/twTown1982.geo.json → scripts/tw-town-raw.geojson
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RAW_PATH = path.join(__dirname, "tw-raw.geojson");
+const TOWN_RAW_PATH = path.join(__dirname, "tw-town-raw.geojson");
 const OUT_PATH = path.join(__dirname, "..", "public", "map", "map-data.json");
 
 const LAT0 = 23.6; // 台灣中心緯度，當作投影基準
@@ -85,8 +86,32 @@ for (const feature of raw.features) {
     name,
     outline: projected.map(([x, y]) => [Math.round(x), Math.round(y)]),
     centroidLonLat: [Number(cx.toFixed(4)), Number(cy.toFixed(4))],
+    districts: [],
+  });
+}
+
+const countyByName = new Map(counties.map((c) => [c.name, c]));
+const townRaw = JSON.parse(readFileSync(TOWN_RAW_PATH, "utf-8"));
+
+for (const feature of townRaw.features) {
+  const countyName = feature.properties.COUNTYNAME;
+  const townName = feature.properties.TOWNNAME;
+  const county = countyByName.get(countyName);
+  if (!county) continue; // 縣市名對不上就跳過（例如資料更新過的舊名稱）
+
+  const ring = largestRing(feature.geometry);
+  if (!ring || ring.length < 4) continue;
+  const simplified = simplify(ring, 8, project); // 區的範圍比縣市小很多，門檻抓緊一點（約 800 公尺）
+  const projected = simplified.map(project);
+  const [cx, cy] = centroidOf(ring);
+
+  county.districts.push({
+    name: townName,
+    outline: projected.map(([x, y]) => [Math.round(x), Math.round(y)]),
+    centroidLonLat: [Number(cx.toFixed(4)), Number(cy.toFixed(4))],
   });
 }
 
 writeFileSync(OUT_PATH, JSON.stringify({ counties }));
-console.log(`寫入 ${counties.length} 個縣市，檔案大小約 ${(readFileSync(OUT_PATH).length / 1024).toFixed(1)} KB`);
+const totalDistricts = counties.reduce((n, c) => n + c.districts.length, 0);
+console.log(`寫入 ${counties.length} 個縣市、${totalDistricts} 個區鄉鎮市，檔案大小約 ${(readFileSync(OUT_PATH).length / 1024).toFixed(1)} KB`);

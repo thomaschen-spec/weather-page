@@ -62,7 +62,7 @@
   <div id="picker">
     <select id="countySelect"><option value="">選縣市…</option></select>
   </div>
-  <div id="hint">滑鼠拖曳旋轉／滾輪縮放；點擊或用選單選一個縣市查看天氣</div>
+  <div id="hint">滑鼠拖曳旋轉／滾輪縮放；點擊或用選單選一個縣市，放大後可以再點裡面的區/鄉/鎮查看該區天氣</div>
   <div id="compass" title="指南針：紅色箭頭永遠指向畫面上的地理北方">
     <svg viewBox="0 0 64 64">
       <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
@@ -154,24 +154,26 @@ updateCamera();
 
 // ---- 讀取縣市資料，蓋出立體色塊 ----
 const countyMeshes = [];
+const districtMeshes = [];
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
 const palette = [0x2a7f9e, 0x2f8f7a, 0x4a8f5c, 0x8f7a2f, 0x9e5a2a, 0x7a4a8f, 0x2a5a9e];
+const districtPalette = [0x3d95b8, 0x3fab8f, 0x5fab72, 0xab953f, 0xb8723d, 0x955fab, 0x3f6fab];
+
+function makeExtrudeMesh(outline, depth, color) {
+  const shape = new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, -y)));
+  const geometry = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 10, bevelSize: 10, bevelSegments: 1 });
+  geometry.rotateX(-Math.PI / 2);
+  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0.05 });
+  return new THREE.Mesh(geometry, material);
+}
 
 fetch("./map-data.json")
   .then((r) => r.json())
   .then((data) => {
     data.counties.forEach((county, i) => {
-      const shape = new THREE.Shape(county.outline.map(([x, y]) => new THREE.Vector2(x, -y)));
-      const geometry = new THREE.ExtrudeGeometry(shape, { depth: 220, bevelEnabled: true, bevelThickness: 20, bevelSize: 20, bevelSegments: 1 });
-      geometry.rotateX(-Math.PI / 2);
-      const material = new THREE.MeshStandardMaterial({
-        color: palette[i % palette.length],
-        roughness: 0.75,
-        metalness: 0.05,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
+      const mesh = makeExtrudeMesh(county.outline, 220, palette[i % palette.length]);
       mesh.userData.county = county;
       scene.add(mesh);
       countyMeshes.push(mesh);
@@ -219,6 +221,7 @@ function clearCityDecor() {
     obj.geometry?.dispose?.();
     obj.material?.dispose?.();
   }
+  districtMeshes.length = 0;
 }
 
 function spawnCityDecor(county) {
@@ -229,38 +232,23 @@ function spawnCityDecor(county) {
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
 
-  // 隨機灑低多邊形小房塊，只保留落在縣市範圍內的點
-  const buildingCount = 26;
-  let placed = 0, attempts = 0;
-  while (placed < buildingCount && attempts < buildingCount * 12) {
-    attempts++;
-    const x = minX + Math.random() * (maxX - minX);
-    const y = minY + Math.random() * (maxY - minY);
-    if (!pointInPolygon(x, y, county.outline)) continue;
+  // 放大後改顯示真正的區/鄉/鎮邊界（不是假的隨機房塊），每個都可以點出該區天氣
+  (county.districts || []).forEach((district, i) => {
+    const mesh = makeExtrudeMesh(district.outline, 236, districtPalette[i % districtPalette.length]);
+    mesh.userData.county = county;
+    mesh.userData.district = district;
+    cityDecor.add(mesh);
+    districtMeshes.push(mesh);
+  });
 
-    const w = 12 + Math.random() * 22;
-    const d = 12 + Math.random() * 22;
-    const h = 30 + Math.random() * 130;
-    const geometry = new THREE.BoxGeometry(w, h, d);
-    const shade = 0.55 + Math.random() * 0.35;
-    const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(0.85 * shade, 0.82 * shade, 0.78 * shade),
-      roughness: 0.9,
-    });
-    const box = new THREE.Mesh(geometry, material);
-    box.position.set(x, 220 + h / 2, y);
-    cityDecor.add(box);
-    placed++;
-  }
-
-  // 半透明霧化片，飄在小房塊上方
+  // 半透明霧化片，飄在區塊上方，純美觀
   for (let i = 0; i < 3; i++) {
     const mist = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTexture, transparent: true, depthWrite: false }));
     const w = 260 + Math.random() * 180;
     mist.scale.set(w, w * 0.55, 1);
     const cx = minX + Math.random() * (maxX - minX);
     const cy = minY + Math.random() * (maxY - minY);
-    mist.position.set(cx, 260 + Math.random() * 60, cy);
+    mist.position.set(cx, 300 + Math.random() * 60, cy);
     mist.userData.baseY = mist.position.y;
     mist.userData.phase = Math.random() * Math.PI * 2;
     cityDecor.add(mist);
@@ -283,7 +271,7 @@ function projectCentroidToScreen(county) {
   };
 }
 
-const openCards = new Map(); // county name -> {el, worldPos}
+const openCards = new Map(); // key(縣市 或 縣市/區) -> { card: DOM元素, place: {centroidLonLat,...} }
 
 async function fetchWeather(lon, lat) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&timezone=Asia%2FTaipei`;
@@ -313,20 +301,20 @@ function outfitSuggestion(c) {
   return base;
 }
 
-function openWeatherCard(county) {
-  if (openCards.has(county.name)) return;
+function openWeatherCard(place, key, label) {
+  if (openCards.has(key)) return;
 
   const card = document.createElement("div");
   card.className = "weather-card";
-  card.innerHTML = `<span class="close">✕</span><div class="city">${county.name}</div><div class="loading">讀取天氣中…</div>`;
+  card.innerHTML = `<span class="close">✕</span><div class="city">${label}</div><div class="loading">讀取天氣中…</div>`;
   app.appendChild(card);
   card.querySelector(".close").addEventListener("click", () => {
     card.remove();
-    openCards.delete(county.name);
+    openCards.delete(key);
   });
-  openCards.set(county.name, card);
+  openCards.set(key, { card, place });
 
-  const [lon, lat] = county.centroidLonLat;
+  const [lon, lat] = place.centroidLonLat;
   fetchWeather(lon, lat).then((data) => {
     const c = data.current;
     if (!c) { card.querySelector(".loading").textContent = "抓不到資料"; return; }
@@ -336,7 +324,7 @@ function openWeatherCard(county) {
     const outfitMsg = outfitSuggestion(c);
     card.innerHTML = `
       <span class="close">✕</span>
-      <div class="city">${county.name}</div>
+      <div class="city">${label}</div>
       <span class="icon">${icon}</span><span class="temp">${Math.round(c.temperature_2m)}°</span>
       <div class="desc">${desc}</div>
       <div class="rows">
@@ -348,7 +336,7 @@ function openWeatherCard(county) {
       ${alertMsg ? `<div class="alert">${alertMsg}</div>` : ""}`;
     card.querySelector(".close").addEventListener("click", () => {
       card.remove();
-      openCards.delete(county.name);
+      openCards.delete(key);
     });
   }).catch(() => {
     card.querySelector(".loading").textContent = "網路或資料錯誤";
@@ -366,7 +354,7 @@ function focusCounty(name) {
   spherical.radius = 900;
   updateCamera();
   spawnCityDecor(mesh.userData.county);
-  openWeatherCard(mesh.userData.county);
+  openWeatherCard(mesh.userData.county, mesh.userData.county.name, mesh.userData.county.name);
 }
 
 select.addEventListener("change", () => {
@@ -377,6 +365,18 @@ renderer.domElement.addEventListener("click", (e) => {
   pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
+
+  // 已經放大到某縣市時，優先點選底下的區/鄉/鎮；否則點的是整島縣市層
+  if (districtMeshes.length) {
+    const districtHits = raycaster.intersectObjects(districtMeshes);
+    if (districtHits.length) {
+      const { county, district } = districtHits[0].object.userData;
+      const key = `${county.name}/${district.name}`;
+      openWeatherCard(district, key, `${county.name} ${district.name}`);
+      return;
+    }
+  }
+
   const hits = raycaster.intersectObjects(countyMeshes);
   if (hits.length) {
     const county = hits[0].object.userData.county;
@@ -405,13 +405,8 @@ function updateCompass() {
 
 function animate() {
   requestAnimationFrame(animate);
-  for (const [name, card] of openCards) {
-    const mesh = countyMeshes.find((m) => m.userData.county.name === name);
-    if (!mesh) continue;
-    mesh.geometry.computeBoundingBox();
-    const center = new THREE.Vector3();
-    mesh.geometry.boundingBox.getCenter(center);
-    const pos = projectCentroidToScreen(mesh.userData.county);
+  for (const { card, place } of openCards.values()) {
+    const pos = projectCentroidToScreen(place);
     card.style.left = `${pos.x}px`;
     card.style.top = `${pos.y}px`;
   }
