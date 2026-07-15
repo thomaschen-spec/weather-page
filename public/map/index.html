@@ -175,6 +175,90 @@ fetch("./map-data.json")
     });
   });
 
+// ---- 放大某縣市時，長出低多邊形小房塊＋一層霧化效果 ----
+const cityDecor = new THREE.Group();
+scene.add(cityDecor);
+
+function pointInPolygon(x, y, outline) {
+  let inside = false;
+  for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+    const [xi, yi] = outline[i];
+    const [xj, yj] = outline[j];
+    const intersect = (yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function makeMistTexture() {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, "rgba(210,225,240,0.55)");
+  grad.addColorStop(0.6, "rgba(210,225,240,0.22)");
+  grad.addColorStop(1, "rgba(210,225,240,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+const mistTexture = makeMistTexture();
+
+function clearCityDecor() {
+  while (cityDecor.children.length) {
+    const obj = cityDecor.children.pop();
+    obj.geometry?.dispose?.();
+    obj.material?.dispose?.();
+  }
+}
+
+function spawnCityDecor(county) {
+  clearCityDecor();
+
+  const xs = county.outline.map(([x]) => x);
+  const ys = county.outline.map(([, y]) => y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+  // 隨機灑低多邊形小房塊，只保留落在縣市範圍內的點
+  const buildingCount = 26;
+  let placed = 0, attempts = 0;
+  while (placed < buildingCount && attempts < buildingCount * 12) {
+    attempts++;
+    const x = minX + Math.random() * (maxX - minX);
+    const y = minY + Math.random() * (maxY - minY);
+    if (!pointInPolygon(x, y, county.outline)) continue;
+
+    const w = 12 + Math.random() * 22;
+    const d = 12 + Math.random() * 22;
+    const h = 30 + Math.random() * 130;
+    const geometry = new THREE.BoxGeometry(w, h, d);
+    const shade = 0.55 + Math.random() * 0.35;
+    const material = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0.85 * shade, 0.82 * shade, 0.78 * shade),
+      roughness: 0.9,
+    });
+    const box = new THREE.Mesh(geometry, material);
+    box.position.set(x, 220 + h / 2, y);
+    cityDecor.add(box);
+    placed++;
+  }
+
+  // 半透明霧化片，飄在小房塊上方
+  for (let i = 0; i < 3; i++) {
+    const mist = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTexture, transparent: true, depthWrite: false }));
+    const w = 260 + Math.random() * 180;
+    mist.scale.set(w, w * 0.55, 1);
+    const cx = minX + Math.random() * (maxX - minX);
+    const cy = minY + Math.random() * (maxY - minY);
+    mist.position.set(cx, 260 + Math.random() * 60, cy);
+    mist.userData.baseY = mist.position.y;
+    mist.userData.phase = Math.random() * Math.PI * 2;
+    cityDecor.add(mist);
+  }
+}
+
 function projectCentroidToScreen(county) {
   const [lon, lat] = county.centroidLonLat;
   const LAT0 = 23.6, LON0 = 120.9;
@@ -247,6 +331,7 @@ function focusCounty(name) {
   cameraTarget = center;
   spherical.radius = 900;
   updateCamera();
+  spawnCityDecor(mesh.userData.county);
   openWeatherCard(mesh.userData.county);
 }
 
@@ -297,6 +382,12 @@ function animate() {
     card.style.top = `${pos.y}px`;
   }
   updateCompass();
+  const t = performance.now() / 1000;
+  for (const obj of cityDecor.children) {
+    if (obj.isSprite) {
+      obj.position.y = obj.userData.baseY + Math.sin(t * 0.4 + obj.userData.phase) * 12;
+    }
+  }
   renderer.render(scene, camera);
 }
 animate();
