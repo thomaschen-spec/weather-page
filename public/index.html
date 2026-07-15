@@ -49,6 +49,18 @@
     font-size: 0.75rem;
     opacity: 0.6;
   }
+  .alert {
+    margin-top: 1rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    background: rgba(224, 82, 82, 0.18);
+    border: 1px solid rgba(224, 82, 82, 0.5);
+    color: #a02323;
+  }
+  @media (prefers-color-scheme: dark) {
+    .alert { color: #ffb3b3; }
+  }
   /* 手機直式：卡片自動變窄變高，上面的 min()寬度與 flex 置中已經處理好，不用另外寫 media query */
   @media (min-width: 700px) {
     .card { padding: 3rem 2.5rem; }
@@ -59,14 +71,15 @@
 <body>
   <div class="card">
     <div class="city">台北</div>
-    <div class="icon">🌦️</div>
+    <div class="icon">🌧️</div>
     <div class="temp">33°C</div>
-    <div class="desc">毛毛雨(小)</div>
+    <div class="desc">毛毛雨(大)</div>
     <div class="meta">
       <div>💧 濕度 60%</div>
       <div>💨 風速 8 km/h</div>
     </div>
-    <div class="updated">最後更新：2026-07-15 12:00（每小時自動更新一次）</div>
+    <div class="alert">⚠️ 高溫警示，體感溫度極高，避免長時間曝曬</div>
+    <div class="updated">最後更新：2026-07-15 12:24（每小時自動更新一次）</div>
     <div class="updated"><a href="./map/" style="color:inherit;">🗺️ 看 3D 台灣天氣地圖 →</a></div>
   </div>
   <script>

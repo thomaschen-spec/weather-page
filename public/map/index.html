@@ -47,6 +47,10 @@
   .weather-card .desc { font-size: 0.85rem; color: #cdd9e6; margin: 2px 0 8px; }
   .weather-card .rows { font-size: 0.8rem; color: #dbe6f2; line-height: 1.6; }
   .weather-card .loading { font-size: 0.85rem; color: #9fb3c8; }
+  .weather-card .alert {
+    margin-top: 8px; padding: 6px 8px; border-radius: 8px; font-size: 0.78rem;
+    background: rgba(224, 82, 82, 0.25); border: 1px solid rgba(224, 82, 82, 0.5); color: #ffd7d7;
+  }
 </style>
 </head>
 <body>
@@ -278,9 +282,19 @@ function projectCentroidToScreen(county) {
 const openCards = new Map(); // county name -> {el, worldPos}
 
 async function fetchWeather(lon, lat) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code&timezone=Asia%2FTaipei`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&timezone=Asia%2FTaipei`;
   const res = await fetch(url);
   return res.json();
+}
+
+const SEVERE_CODES = new Set([65, 67, 75, 82, 95, 96, 99]); // 大雨/大雪/強陣雨/雷雨
+function severeAlert(c) {
+  if (SEVERE_CODES.has(c.weather_code)) return "⚠️ 大雨雷雨特報，注意防範積水、雷擊";
+  if (c.wind_speed_10m >= 50) return "⚠️ 強風特報，外出請注意招牌與飛落物";
+  if (c.apparent_temperature >= 38) return "⚠️ 高溫警示，體感溫度極高，避免長時間曝曬";
+  if (c.apparent_temperature <= 5) return "⚠️ 低溫特報，注意保暖";
+  if ((c.precipitation_probability ?? 0) >= 80) return "☔ 降雨機率很高，記得帶傘";
+  return null;
 }
 
 function openWeatherCard(county) {
@@ -302,6 +316,7 @@ function openWeatherCard(county) {
     if (!c) { card.querySelector(".loading").textContent = "抓不到資料"; return; }
     const icon = WEATHER_ICONS[c.weather_code] ?? "🌡️";
     const desc = WEATHER_DESC[c.weather_code] ?? "";
+    const alertMsg = severeAlert(c);
     card.innerHTML = `
       <span class="close">✕</span>
       <div class="city">${county.name}</div>
@@ -311,7 +326,8 @@ function openWeatherCard(county) {
         體感溫度：${Math.round(c.apparent_temperature)}°<br>
         濕度：${Math.round(c.relative_humidity_2m)}%<br>
         降雨機率：${c.precipitation_probability ?? "-"}%
-      </div>`;
+      </div>
+      ${alertMsg ? `<div class="alert">${alertMsg}</div>` : ""}`;
     card.querySelector(".close").addEventListener("click", () => {
       card.remove();
       openCards.delete(county.name);

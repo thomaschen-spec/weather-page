@@ -25,3 +25,20 @@ WEATHER_CODES = {
 
 def describe(code):
     return WEATHER_CODES.get(code, ("未知", "❔"))
+
+
+SEVERE_CODES = {65, 67, 75, 82, 95, 96, 99}
+
+
+def severe_alert(weather_code, wind_speed, apparent_temp, precip_prob):
+    if weather_code in SEVERE_CODES:
+        return "⚠️ 大雨雷雨特報，注意防範積水、雷擊"
+    if wind_speed is not None and wind_speed >= 50:
+        return "⚠️ 強風特報，外出請注意招牌與飛落物"
+    if apparent_temp is not None and apparent_temp >= 38:
+        return "⚠️ 高溫警示，體感溫度極高，避免長時間曝曬"
+    if apparent_temp is not None and apparent_temp <= 5:
+        return "⚠️ 低溫特報，注意保暖"
+    if precip_prob is not None and precip_prob >= 80:
+        return "☔ 降雨機率很高，記得帶傘"
+    return None

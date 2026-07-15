@@ -49,6 +49,18 @@
     font-size: 0.75rem;
     opacity: 0.6;
   }
+  .alert {
+    margin-top: 1rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    background: rgba(224, 82, 82, 0.18);
+    border: 1px solid rgba(224, 82, 82, 0.5);
+    color: #a02323;
+  }
+  @media (prefers-color-scheme: dark) {
+    .alert { color: #ffb3b3; }
+  }
   /* 手機直式：卡片自動變窄變高，上面的 min()寬度與 flex 置中已經處理好，不用另外寫 media query */
   @media (min-width: 700px) {
     .card { padding: 3rem 2.5rem; }
@@ -66,6 +78,7 @@
       <div>💧 濕度 {{HUMIDITY}}%</div>
       <div>💨 風速 {{WIND}} km/h</div>
     </div>
+    {{ALERT}}
     <div class="updated">最後更新：{{UPDATED_AT}}（每小時自動更新一次）</div>
     <div class="updated"><a href="./map/" style="color:inherit;">🗺️ 看 3D 台灣天氣地圖 →</a></div>
   </div>

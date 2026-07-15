@@ -5,7 +5,7 @@ import urllib.request
 import json
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from weather_codes import describe
+from weather_codes import describe, severe_alert
 
 CITY = "台北"
 LATITUDE = 25.0330
@@ -13,7 +13,7 @@ LONGITUDE = 121.5654
 API_URL = (
     "https://api.open-meteo.com/v1/forecast"
     f"?latitude={LATITUDE}&longitude={LONGITUDE}"
-    "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+    "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature,precipitation_probability"
     "&timezone=Asia%2FTaipei"
 )
 
@@ -32,6 +32,13 @@ def render(data):
     desc, icon = describe(current["weather_code"])
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     now = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M")
+    alert = severe_alert(
+        current["weather_code"],
+        current.get("wind_speed_10m"),
+        current.get("apparent_temperature"),
+        current.get("precipitation_probability"),
+    )
+    alert_html = f'<div class="alert">{alert}</div>' if alert else ""
     html = (
         template
         .replace("{{CITY}}", CITY)
@@ -41,6 +48,7 @@ def render(data):
         .replace("{{HUMIDITY}}", str(round(current["relative_humidity_2m"])))
         .replace("{{WIND}}", str(round(current["wind_speed_10m"])))
         .replace("{{UPDATED_AT}}", now)
+        .replace("{{ALERT}}", alert_html)
     )
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(html, encoding="utf-8")
