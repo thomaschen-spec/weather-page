@@ -24,6 +24,15 @@
     font-family: -apple-system, "Segoe UI", "Microsoft JhengHei", sans-serif; font-size: 0.75rem;
   }
 
+  #compass {
+    position: absolute; top: 16px; right: 16px; z-index: 10;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(15, 25, 40, 0.75); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  #compass svg { width: 100%; height: 100%; }
+  #compass .needle { transform-origin: 32px 32px; transition: transform 0.05s linear; }
+
   .weather-card {
     position: absolute; z-index: 20; transform: translate(-50%, -100%);
     background: rgba(20, 35, 55, 0.55); backdrop-filter: blur(10px);
@@ -46,6 +55,19 @@
     <select id="countySelect"><option value="">選縣市…</option></select>
   </div>
   <div id="hint">滑鼠拖曳旋轉／滾輪縮放；點擊或用選單選一個縣市查看天氣</div>
+  <div id="compass" title="指南針：紅色箭頭永遠指向畫面上的地理北方">
+    <svg viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+      <text x="32" y="12" fill="#eaf3ff" font-size="10" text-anchor="middle" font-family="sans-serif">N</text>
+      <text x="32" y="58" fill="#9fb3c8" font-size="9" text-anchor="middle" font-family="sans-serif">S</text>
+      <text x="8" y="35" fill="#9fb3c8" font-size="9" text-anchor="middle" font-family="sans-serif">W</text>
+      <text x="56" y="35" fill="#9fb3c8" font-size="9" text-anchor="middle" font-family="sans-serif">E</text>
+      <g class="needle" id="compassNeedle">
+        <polygon points="32,10 27,32 32,27 37,32" fill="#e05252"/>
+        <polygon points="32,54 27,32 32,37 37,32" fill="#9fb3c8"/>
+      </g>
+    </svg>
+  </div>
 </div>
 
 <script type="importmap">
@@ -158,7 +180,7 @@ function projectCentroidToScreen(county) {
   const LAT0 = 23.6, LON0 = 120.9;
   const SCALE = 1 / 100;
   const mPerLat = 110540, mPerLon = 111320 * Math.cos((LAT0 * Math.PI) / 180);
-  const x = (lon - LON0) * mPerLon * SCALE;
+  const x = -(lon - LON0) * mPerLon * SCALE;
   const z = (lat - LAT0) * mPerLat * SCALE;
   const worldPos = new THREE.Vector3(x, 260, z);
   const screenPos = worldPos.clone().project(camera);
@@ -250,6 +272,18 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+const compassNeedle = document.getElementById("compassNeedle");
+const worldNorth = new THREE.Vector3(0, 0, 1);
+function updateCompass() {
+  // 世界座標 +Z＝地理北方（跟 build_map_data.mjs 的投影約定一致）；
+  // 把北方向量轉進「攝影機視角空間」，x=螢幕右分量、y=螢幕上分量，直接算夾角，
+  // 不受畫面上兩點距離造成的透視變形影響（比投影兩個點再算夾角準確）
+  camera.updateMatrixWorld();
+  const viewNorth = worldNorth.clone().transformDirection(camera.matrixWorldInverse);
+  const angleDeg = Math.atan2(viewNorth.x, viewNorth.y) * (180 / Math.PI);
+  compassNeedle.setAttribute("transform", `rotate(${angleDeg} 32 32)`);
+}
+
 function animate() {
   requestAnimationFrame(animate);
   for (const [name, card] of openCards) {
@@ -262,6 +296,7 @@ function animate() {
     card.style.left = `${pos.x}px`;
     card.style.top = `${pos.y}px`;
   }
+  updateCompass();
   renderer.render(scene, camera);
 }
 animate();

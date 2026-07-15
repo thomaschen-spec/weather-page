@@ -18,7 +18,9 @@ const M_PER_DEG_LON = 111320 * Math.cos((LAT0 * Math.PI) / 180);
 const SCALE = 1 / 100; // 把公尺級距離縮成場景友善的單位（台灣全島約可縮到 2500x3800 上下）
 
 function project([lon, lat]) {
-  return [(lon - LON0) * M_PER_DEG_LON * SCALE, (lat - LAT0) * M_PER_DEG_LAT * SCALE];
+  // x 故意取負號：目前的攝影機朝北視角下，正常正負號會讓東西相反（金門變成跑到右邊）
+  // 這裡直接反過來對齊實際畫面，讓「screen 右 = 地理東」，用金門/馬祖(應在左/西)驗證過
+  return [-(lon - LON0) * M_PER_DEG_LON * SCALE, (lat - LAT0) * M_PER_DEG_LAT * SCALE];
 }
 
 // 封閉多邊形簡化：只保留跟前一個已保留點距離超過門檻的點，避免首尾重合造成的 RDP 退化問題
